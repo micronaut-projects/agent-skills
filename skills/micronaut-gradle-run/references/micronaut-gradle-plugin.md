@@ -10,7 +10,7 @@ Full documentation: https://micronaut-projects.github.io/micronaut-gradle-plugin
 ./gradlew run
 ```
 
-By default, the application starts in port 8080, unless the property `micronaut.server.port` is set to a different value in configuration.
+By default, the application starts on port 8080, unless the property `micronaut.server.port` is set to a different value in configuration.
 
 ## Continuous build mode
 
