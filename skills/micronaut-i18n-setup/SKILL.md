@@ -83,7 +83,7 @@ class MessageSourceFactoryTest {
         assertTrue(message.isPresent());
         assertEquals("Logout", message.get());
 
-        message = messageSource.getMessage("logout", Locale.of("es"));
+        message = messageSource.getMessage("logout", Locale.forLanguageTag("es"));
         assertTrue(message.isPresent());
         assertEquals("Salir", message.get());
     }
