@@ -95,9 +95,10 @@ class MessageSourceFactoryTest {
 - The bundle base name passed to `ResourceBundleMessageSource` is dot-separated
   (`i18n.messages`), mirroring the `src/main/resources/i18n/` directory — make sure the
   directory is `i18n` (not `i8n`).
-- `.properties` files are read as ISO-8859-1 by `ResourceBundle`. Write non-ASCII characters
-  (accents, etc.) as Unicode escapes — e.g. `Español` — so they decode correctly
-  regardless of the file's editor encoding.
+- In modern Java (Java 9+), `ResourceBundle` reads `.properties` bundles as UTF-8 by default,
+  so you can write non-ASCII text such as `Español` directly in the file. Use `\uXXXX`
+  escapes only if you must support legacy Java 8 behavior or are loading properties through a
+  non-UTF-8 path.
 - A key missing from a localized bundle falls back to the base `messages.properties`. To
   guarantee every key is translated in every language, add a test that compares the key sets
   of each bundle (see the `micronaut-test-keys-localized` skill).
