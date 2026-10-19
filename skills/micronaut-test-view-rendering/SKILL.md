@@ -74,7 +74,7 @@ class TodoIndexRenderTest {
     void testRenderTodoIndex() throws IOException {
         Writable writable = viewsRenderer.render("todo/index", Map.of("todos", Collections.emptyList()), null);
         String html = WritableUtils.writableToString(writable);
-        boolean isHtml5 = html.contains("<!DOCTYPE html>");
+        boolean isHtml5 = html.stripLeading().regionMatches(true, 0, "<!DOCTYPE html>", 0, "<!DOCTYPE html>".length());
         if (!isHtml5) {
             LOG.trace("{}", html);
         }
