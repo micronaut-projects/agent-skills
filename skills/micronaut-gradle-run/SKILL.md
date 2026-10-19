@@ -19,7 +19,7 @@ allowed-tools: Bash Read
 If you use Windows, use
 
 ```bash
-./gradlew.bat run
+gradlew.bat run
 ```
 
 See [Micronaut Gradle Plugin reference](references/micronaut-gradle-plugin.md) for more details.
