@@ -58,9 +58,9 @@ class TopicSaveTest {
     void topicSaveJsonDeserialization(JsonMapper jsonMapper) throws IOException {
         TopicSave topic = new TopicSave("Oracle Cloud Infrastructure Fundamentals");
         assertEquals(
+                topic,
                 jsonMapper.readValue("""
-                        {"name":"Oracle Cloud Infrastructure Fundamentals"}""", Argument.of(TopicSave.class)),
-                topic);
+                        {"name":"Oracle Cloud Infrastructure Fundamentals"}""", Argument.of(TopicSave.class)));
     }
 }
 ```
