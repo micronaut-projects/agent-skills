@@ -1,0 +1,106 @@
+{
+  "skill_name": "micronaut-testing",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "HomeController in src/main/java/com/example/controllers/HomeController.java redirects GET / to /todo/list. Write a JUnit 5 test that proves the redirect happens and lands on the right path.",
+      "expected_output": "A @MicronautTest class that configures the Micronaut HTTP client not to follow redirects, exchanges GET / and asserts a 303 SEE_OTHER status with a Location header of /todo/list.",
+      "files": ["evals/files/http/HomeController.java"],
+      "assertions": [
+        "The test sets micronaut.http.client.follow-redirects to false (via @Property or equivalent configuration) so the client does not follow the redirect",
+        "The test uses the Micronaut HttpClient injected with @Client(\"/\") and calls toBlocking()",
+        "The test uses client.exchange(...) (not retrieve) so the full HttpResponse is available",
+        "The test asserts the response status is HttpStatus.SEE_OTHER",
+        "The test asserts the Location header equals /todo/list",
+        "No third-party HTTP client (RestAssured, OkHttp, java.net.http) or mocking framework is used"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "hey can you add a test for ContactController? it's under src/main/java/com/example/contacts/. The real repo hits a database so I don't want that in the test, just check the page lists a couple of contacts",
+      "expected_output": "A @MicronautTest that GETs /contact/list with Accept: text/html, retrieves the body as a String and asserts the stubbed contacts appear in the HTML. The ContactRepository is replaced by an in-test stub that is scoped to this test class only.",
+      "files": [
+        "evals/files/http/Contact.java",
+        "evals/files/http/ContactRepository.java",
+        "evals/files/http/JdbcContactRepository.java",
+        "evals/files/http/ContactController.java"
+      ],
+      "assertions": [
+        "The stub repository is a @Singleton annotated with @Replaces(ContactRepository.class)",
+        "The stub is guarded by @Requires(property = \"spec.name\", value = \"<test class name>\") and the test class carries a matching @Property(name = \"spec.name\", value = \"<test class name>\")",
+        "The request sets .accept(MediaType.TEXT_HTML)",
+        "The body is retrieved as a String (client.retrieve(request, String.class) or equivalent) and the assertions check for the stubbed contact names in the HTML",
+        "Mockito or another mocking framework is not used to replace the repository",
+        "The test uses plain @MicronautTest (the embedded server is started) rather than startApplication = false"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "TopicRepository.save has a @NotBlank parameter (src/main/java/com/example/topics/TopicRepository.java). There is no implementation yet. Write a test that fails if someone removes that constraint.",
+      "expected_output": "A @MicronautTest(startApplication = false) that injects TopicRepository, calls save(\"\") and save(null) and asserts ConstraintViolationException with assertThrows. A stub implementation is declared inside the test, scoped to it with spec.name + @Requires.",
+      "files": ["evals/files/validation/TopicRepository.java"],
+      "assertions": [
+        "The test uses @MicronautTest(startApplication = false)",
+        "TopicRepository is obtained from the context (@Inject field or test-method parameter), not instantiated with new",
+        "assertThrows(ConstraintViolationException.class, ...) is used for both an empty string and null",
+        "A stub implementation of TopicRepository is provided as a @Singleton guarded by @Requires(property = \"spec.name\", ...) with a matching @Property(name = \"spec.name\", ...) on the test class",
+        "The test does not call a Validator directly to validate the string; it relies on Micronaut's method-parameter validation on the injected bean"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Add round-trip JSON tests for the Topic record in src/main/java/com/example/topics/Topic.java: object to JSON and JSON back to object.",
+      "expected_output": "A @MicronautTest(startApplication = false) that injects io.micronaut.json.JsonMapper, asserts writeValueAsString(new Topic(\"1\", \"...\")) equals the compact JSON {\"id\":\"1\",\"name\":\"...\"}, and asserts readValue(json, Argument.of(Topic.class)) equals the expected record.",
+      "files": ["evals/files/serialization/Topic.java"],
+      "assertions": [
+        "The test injects io.micronaut.json.JsonMapper (not com.fasterxml.jackson.databind.ObjectMapper)",
+        "The test uses @MicronautTest(startApplication = false)",
+        "Serialization is asserted with jsonMapper.writeValueAsString(...) against a compact JSON string with no whitespace after ':' or ','",
+        "Deserialization is asserted with jsonMapper.readValue(json, Argument.of(Topic.class)) (or the Class overload) and compared with assertEquals against a Topic instance",
+        "The test method declares throws IOException or otherwise handles the checked exception from JsonMapper"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Write a test that guarantees App (src/main/java/com/example/core/App.java) stays introspected — someone keeps deleting the @Introspected annotation by accident.",
+      "expected_output": "A plain JUnit 5 test (no @MicronautTest) asserting assertDoesNotThrow(() -> BeanIntrospection.getIntrospection(App.class)).",
+      "files": ["evals/files/serialization/App.java"],
+      "assertions": [
+        "The test class is NOT annotated with @MicronautTest and does not start an ApplicationContext",
+        "The test calls BeanIntrospection.getIntrospection(App.class)",
+        "The call is wrapped in assertDoesNotThrow (or the test asserts IntrospectionException is not thrown)",
+        "The test does not use Java reflection (App.class.getAnnotation(Introspected.class)) to check for the annotation"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "I have two Calculator beans in src/main/java/com/example/calc/ and injecting Calculator blew up at runtime with NonUniqueBeanException. Write a test so this is caught by the build, and tell me how to make it pass.",
+      "expected_output": "A @MicronautTest(startApplication = false) that injects BeanContext and asserts assertDoesNotThrow(() -> beanContext.getBean(Calculator.class)), plus a note that marking one implementation @Primary (or the others @Secondary) makes it pass.",
+      "files": [
+        "evals/files/beans/Calculator.java",
+        "evals/files/beans/MacOsCalculator.java",
+        "evals/files/beans/WindowsCalculator.java"
+      ],
+      "assertions": [
+        "The test uses @MicronautTest(startApplication = false)",
+        "The test resolves the type with BeanContext.getBean(Calculator.class) (or ApplicationContext.getBean) inside assertDoesNotThrow",
+        "The test does not merely count getBeansOfType(Calculator.class) — it asserts the bare type resolves to a single bean",
+        "The response recommends @Primary on one implementation or @Secondary on the other(s) as the fix",
+        "No bean is deleted or renamed to make the test pass"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "There's a Thymeleaf template at src/main/resources/views/todo/index.html. I want a fast unit test that renders it with an empty todos list and checks the output is an HTML5 document — no HTTP, no server.",
+      "expected_output": "A @MicronautTest(startApplication = false) that injects ThymeleafViewsRenderer (or ViewsRenderer), calls render(\"todo/index\", Map.of(\"todos\", List.of()), null), converts the Writable to a String and asserts it starts with <!DOCTYPE html>.",
+      "files": ["evals/files/views/templates/todo/index.html"],
+      "assertions": [
+        "The test uses @MicronautTest(startApplication = false)",
+        "The test injects a ViewsRenderer (e.g. ThymeleafViewsRenderer) and calls render(\"todo/index\", <model>, <request or null>)",
+        "The Writable returned by render is written to a StringWriter (or equivalent) to obtain the HTML as a String",
+        "The test asserts the HTML begins with <!DOCTYPE html> (case-insensitive, leading whitespace tolerated)",
+        "No HttpClient, controller or embedded server is involved"
+      ]
+    }
+  ]
+}
