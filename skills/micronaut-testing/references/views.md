@@ -1,14 +1,6 @@
----
-name: micronaut-test-view-rendering
-description: Write a test that renders a Micronaut view (template) with a model and asserts on the produced HTML, without starting the server. Use when the user wants to unit-test how a template renders, verify view output for a given model, or check rendered markup with the ViewsRenderer.
-license: Apache-2.0
-compatibility: Requires Micronaut Test (io.micronaut.test) and Micronaut Views (e.g. io.micronaut.views.thymeleaf) on the test classpath.
-metadata:
-  author: Sergio del Amo
-allowed-tools: Bash Read Write Edit
----
+# View rendering
 
-## Instructions
+## Rendering a view without the server
 
 To test how a view renders, inject the `ViewsRenderer` (e.g. `ThymeleafViewsRenderer`), call
 `render(viewName, model, request)`, convert the resulting `Writable` to a `String`, and assert
@@ -83,7 +75,7 @@ class TodoIndexRenderTest {
 }
 ```
 
-## Notes
+### Notes
 
 - This renders the template directly via the `ViewsRenderer`, so it is faster than an HTTP test
   and needs no server (`startApplication = false`). Use it to unit-test template output for a
@@ -96,4 +88,4 @@ class TodoIndexRenderTest {
 - Logging the HTML at `trace` on failure makes diagnosing a bad render easier without spamming
   output on success.
 - To instead exercise the full controller + view over HTTP (status, security, content
-  assertions), use an HTTP client test — see the `micronaut-test-controller-returns-html` skill.
+  assertions), use an HTTP client test — see "A controller returns HTML" in [http.md](http.md).

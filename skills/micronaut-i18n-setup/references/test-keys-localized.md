@@ -1,14 +1,4 @@
----
-name: micronaut-test-keys-localized
-description: Write a test that verifies every message key is localized in every language properties file. Use when the user wants to ensure translations are complete, check i18n message bundles match, or assert no localized key is missing or extra.
-license: Apache-2.0
-compatibility: Requires Micronaut Test (io.micronaut.test) on the test classpath and message bundles under classpath:i18n.
-metadata:
-  author: Sergio del Amo
-allowed-tools: Bash Read Write Edit
----
-
-## Instructions
+# Test every key is localized in every language
 
 To verify every key in the base `messages.properties` is also present in each localized
 bundle (e.g. `messages_es.properties`), load both files as `Properties` and assert their key

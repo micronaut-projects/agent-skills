@@ -101,7 +101,7 @@ class MessageSourceFactoryTest {
   non-UTF-8 path.
 - A key missing from a localized bundle falls back to the base `messages.properties`. To
   guarantee every key is translated in every language, add a test that compares the key sets
-  of each bundle (see the `micronaut-test-keys-localized` skill).
+  of each bundle (see [references/test-keys-localized.md](references/test-keys-localized.md)).
 - To control which locale a request resolves to, configure
   `micronaut.server.locale-resolution` (e.g. `fixed`, `cookie-name`, `header`, or
   `default-locale`).
