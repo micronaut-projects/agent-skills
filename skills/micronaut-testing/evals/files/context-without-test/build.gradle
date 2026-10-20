@@ -1,0 +1,10 @@
+plugins {
+    id("io.micronaut.application") version "4.4.4"
+}
+
+dependencies {
+    annotationProcessor("io.micronaut:micronaut-inject-java")
+    implementation("io.micronaut:micronaut-inject")
+    testImplementation("org.junit.jupiter:junit-jupiter-api")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+}

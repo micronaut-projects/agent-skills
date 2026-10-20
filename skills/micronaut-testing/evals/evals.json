@@ -1,0 +1,406 @@
+{
+  "skill_name": "micronaut-testing",
+  "evals": [
+    {
+      "id": 1,
+      "name": "redirect",
+      "prompt": "HomeController in src/main/java/com/example/controllers/HomeController.java redirects GET / to /todo/list. Write a JUnit 5 test that proves the redirect happens and lands on the right path.",
+      "expected_output": "A @MicronautTest class that configures the Micronaut HTTP client not to follow redirects, exchanges GET / and asserts a 303 SEE_OTHER status with a Location header of /todo/list.",
+      "files": [
+        "evals/files/redirect/src/main/java/com/example/controllers/HomeController.java"
+      ],
+      "assertions": [
+        "The test sets micronaut.http.client.follow-redirects to false (via @Property or equivalent configuration) so the client does not follow the redirect",
+        "The test uses the Micronaut HttpClient injected with @Client(\"/\") and calls toBlocking()",
+        "The test uses client.exchange(...) (not retrieve) so the full HttpResponse is available",
+        "The test asserts the response status is HttpStatus.SEE_OTHER",
+        "The test asserts the Location header equals /todo/list",
+        "No third-party HTTP client (RestAssured, OkHttp, java.net.http) or mocking framework is used"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "controller-html",
+      "prompt": "hey can you add a test for ContactController? it's under src/main/java/com/example/contacts/. The real repo hits a database so I don't want that in the test, just check the page lists a couple of contacts",
+      "expected_output": "A @MicronautTest that GETs /contact/list with Accept: text/html, retrieves the body as a String and asserts the stubbed contacts appear in the HTML. The ContactRepository is replaced by an in-test stub that is scoped to this test class only.",
+      "files": [
+        "evals/files/controller-html/src/main/java/com/example/contacts/Contact.java",
+        "evals/files/controller-html/src/main/java/com/example/contacts/ContactController.java",
+        "evals/files/controller-html/src/main/java/com/example/contacts/ContactRepository.java",
+        "evals/files/controller-html/src/main/java/com/example/contacts/JdbcContactRepository.java"
+      ],
+      "assertions": [
+        "The stub repository is a @Singleton annotated with @Replaces targeting the real repository (ContactRepository or JdbcContactRepository)",
+        "The stub is guarded by @Requires(property = \"spec.name\", value = \"<test class name>\") and the test class carries a matching @Property(name = \"spec.name\", value = \"<test class name>\")",
+        "The request sets .accept(MediaType.TEXT_HTML)",
+        "The body is retrieved as a String (client.retrieve(request, String.class) or equivalent) and the assertions check for the stubbed contact names in the HTML",
+        "Mockito or another mocking framework is not used to replace the repository",
+        "The test uses plain @MicronautTest (the embedded server is started) rather than startApplication = false"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "method-validation",
+      "prompt": "TopicRepository.save has a @NotBlank parameter (src/main/java/com/example/topics/TopicRepository.java). There is no implementation yet. Write a test that fails if someone removes that constraint.",
+      "expected_output": "A @MicronautTest(startApplication = false) that injects TopicRepository, calls save(\"\") and save(null) and asserts ConstraintViolationException with assertThrows. A stub implementation is declared inside the test, scoped to it with spec.name + @Requires.",
+      "files": [
+        "evals/files/method-validation/src/main/java/com/example/topics/TopicRepository.java"
+      ],
+      "assertions": [
+        "The test uses @MicronautTest(startApplication = false)",
+        "TopicRepository is obtained from the context (@Inject field or test-method parameter), not instantiated with new",
+        "assertThrows(ConstraintViolationException.class, ...) is used for both an empty string and null",
+        "A stub implementation of TopicRepository is provided as a @Singleton guarded by @Requires(property = \"spec.name\", ...) with a matching @Property(name = \"spec.name\", ...) on the test class",
+        "The test does not call a Validator directly to validate the string; it relies on Micronaut's method-parameter validation on the injected bean"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "json-roundtrip",
+      "prompt": "Add round-trip JSON tests for the Topic record in src/main/java/com/example/topics/Topic.java: object to JSON and JSON back to object.",
+      "expected_output": "A @MicronautTest(startApplication = false) that injects io.micronaut.json.JsonMapper, asserts writeValueAsString(new Topic(\"1\", \"...\")) equals the compact JSON {\"id\":\"1\",\"name\":\"...\"}, and asserts readValue(json, Argument.of(Topic.class)) equals the expected record.",
+      "files": [
+        "evals/files/json-roundtrip/src/main/java/com/example/topics/Topic.java"
+      ],
+      "assertions": [
+        "The test injects io.micronaut.json.JsonMapper (not com.fasterxml.jackson.databind.ObjectMapper)",
+        "The test uses @MicronautTest(startApplication = false)",
+        "Serialization is asserted with jsonMapper.writeValueAsString(...) against a compact JSON string with no whitespace after ':' or ','",
+        "Deserialization is asserted with jsonMapper.readValue(json, Argument.of(Topic.class)) (or the Class overload) and compared with assertEquals against a Topic instance",
+        "The test method declares throws IOException or otherwise handles the checked exception from JsonMapper"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "introspection",
+      "prompt": "Write a test that guarantees App (src/main/java/com/example/core/App.java) stays introspected \u2014 someone keeps deleting the @Introspected annotation by accident.",
+      "expected_output": "A plain JUnit 5 test (no @MicronautTest) asserting assertDoesNotThrow(() -> BeanIntrospection.getIntrospection(App.class)).",
+      "files": [
+        "evals/files/introspection/src/main/java/com/example/core/App.java"
+      ],
+      "assertions": [
+        "The test class is NOT annotated with @MicronautTest and does not start an ApplicationContext",
+        "The test calls BeanIntrospection.getIntrospection(App.class)",
+        "The call is wrapped in assertDoesNotThrow (or the test asserts IntrospectionException is not thrown)",
+        "The test does not use Java reflection (App.class.getAnnotation(Introspected.class)) to check for the annotation"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "non-unique-bean",
+      "prompt": "I have two Calculator beans in src/main/java/com/example/calc/ and injecting Calculator blew up at runtime with NonUniqueBeanException. Write a test so this is caught by the build, and tell me how to make it pass.",
+      "expected_output": "A @MicronautTest(startApplication = false) that injects BeanContext and asserts assertDoesNotThrow(() -> beanContext.getBean(Calculator.class)), plus a note that marking one implementation @Primary (or the others @Secondary) makes it pass.",
+      "files": [
+        "evals/files/non-unique-bean/src/main/java/com/example/calc/Calculator.java",
+        "evals/files/non-unique-bean/src/main/java/com/example/calc/MacOsCalculator.java",
+        "evals/files/non-unique-bean/src/main/java/com/example/calc/WindowsCalculator.java"
+      ],
+      "assertions": [
+        "The test uses @MicronautTest(startApplication = false)",
+        "The test resolves the type with BeanContext.getBean(Calculator.class) (or ApplicationContext.getBean) inside assertDoesNotThrow",
+        "The test does not merely count getBeansOfType(Calculator.class) \u2014 it asserts the bare type resolves to a single bean",
+        "The response recommends @Primary on one implementation or @Secondary on the other(s) as the fix",
+        "No bean is deleted or renamed to make the test pass"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "view-render",
+      "prompt": "There's a Thymeleaf template at src/main/resources/views/todo/index.html. I want a fast unit test that renders it with an empty todos list and checks the output is an HTML5 document \u2014 no HTTP, no server.",
+      "expected_output": "A @MicronautTest(startApplication = false) that injects ThymeleafViewsRenderer (or ViewsRenderer), calls render(\"todo/index\", Map.of(\"todos\", List.of()), null), converts the Writable to a String and asserts it starts with <!DOCTYPE html>.",
+      "files": [
+        "evals/files/view-render/src/main/resources/views/todo/index.html"
+      ],
+      "assertions": [
+        "The test uses @MicronautTest(startApplication = false)",
+        "The test injects a ViewsRenderer (e.g. ThymeleafViewsRenderer) and calls render(\"todo/index\", <model>, <request or null>)",
+        "The Writable returned by render is written to a StringWriter (or equivalent) to obtain the HTML as a String",
+        "The test asserts the HTML begins with <!DOCTYPE html> (case-insensitive, leading whitespace tolerated)",
+        "No HttpClient, controller or embedded server is involved"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "cookie-redirect",
+      "prompt": "LocaleController (src/main/java/com/example/locale/LocaleController.java) stores the language the user picks in a cookie. Write a test that posting locale=es sets the locale cookie to es.",
+      "expected_output": "A @MicronautTest with micronaut.http.client.follow-redirects=false that POSTs a form-urlencoded locale=es to /locale, uses exchange, asserts 303 SEE_OTHER and asserts response.getCookie(\"locale\") is present with value es.",
+      "files": [
+        "evals/files/cookie-redirect/src/main/java/com/example/locale/LocaleController.java"
+      ],
+      "assertions": [
+        "The test sets micronaut.http.client.follow-redirects to false so the cookie on the 303 response is observed",
+        "The request is sent with content type application/x-www-form-urlencoded (MediaType.APPLICATION_FORM_URLENCODED)",
+        "The test uses client.exchange(...) to get the full HttpResponse",
+        "The test asserts the status is HttpStatus.SEE_OTHER",
+        "The test reads the cookie with response.getCookie(\"locale\") and asserts it is present and its value is es"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "redirect-status",
+      "prompt": "LegacyController has two redirects: /old-pricing and /maintenance. Add tests for both.",
+      "expected_output": "Two tests with follow-redirects=false: /old-pricing returns 301 MOVED_PERMANENTLY with Location /pricing (HttpResponse.redirect), /maintenance returns 307 TEMPORARY_REDIRECT with Location /status (HttpResponse.temporaryRedirect).",
+      "files": [
+        "evals/files/redirect-status/src/main/java/com/example/legacy/LegacyController.java"
+      ],
+      "assertions": [
+        "The test sets micronaut.http.client.follow-redirects to false",
+        "/old-pricing is asserted to return HttpStatus.MOVED_PERMANENTLY (301), matching HttpResponse.redirect",
+        "/maintenance is asserted to return HttpStatus.TEMPORARY_REDIRECT (307), matching HttpResponse.temporaryRedirect",
+        "Neither test asserts SEE_OTHER (303) or FOUND (302)",
+        "Both tests assert the exact Location header (/pricing and /status)"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "static-secured",
+      "prompt": "We serve images from src/main/resources/assets/images under /assets/images/** and the app uses Micronaut Security (see application.properties). Add a test that makes sure logo.svg loads for visitors who aren't logged in.",
+      "expected_output": "A @MicronautTest (server started) that GETs /assets/images/logo.svg anonymously and asserts it succeeds, with security left enabled so the intercept-url-map rule is exercised.",
+      "files": [
+        "evals/files/static-secured/src/main/resources/application.properties",
+        "evals/files/static-secured/src/main/resources/assets/images/logo.svg"
+      ],
+      "assertions": [
+        "The test uses @MicronautTest without startApplication = false",
+        "The test requests /assets/images/logo.svg through the Micronaut HttpClient",
+        "The test asserts success (assertDoesNotThrow around exchange, or HttpStatus.OK)",
+        "Security is NOT disabled (no micronaut.security.enabled=false or micronaut.security.filter.enabled=false)",
+        "The request carries no credentials (it is anonymous)"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "secured-authenticated",
+      "prompt": "DashboardController is @Secured(IS_AUTHENTICATED). I want tests showing anonymous users are rejected and a logged-in user sees their username.",
+      "expected_output": "Security stays enabled. One test asserts an anonymous GET /dashboard throws HttpClientResponseException with 401 UNAUTHORIZED. Another authenticates (e.g. a test-scoped AuthenticationProvider and basic auth, or a generated JWT) and asserts the body contains the username. Test-only beans are scoped with spec.name + @Requires.",
+      "files": [
+        "evals/files/secured-authenticated/src/main/java/com/example/dashboard/DashboardController.java",
+        "evals/files/secured-authenticated/src/main/resources/application.properties"
+      ],
+      "assertions": [
+        "Security is NOT disabled (no micronaut.security.enabled=false or micronaut.security.filter.enabled=false)",
+        "The anonymous test asserts HttpClientResponseException with HttpStatus.UNAUTHORIZED",
+        "The authenticated test supplies credentials (basic auth with a test AuthenticationProvider, or a bearer token) and asserts the body contains the username",
+        "Any test-only bean (e.g. AuthenticationProvider) is guarded by @Requires(property = \"spec.name\", ...) with a matching @Property(name = \"spec.name\", ...) on the test class"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "security-disabled",
+      "prompt": "ReportController is secured but auth is tested elsewhere. I just want a quick test that GET /reports returns the two reports as JSON \u2014 don't bother with login.",
+      "expected_output": "A @MicronautTest with @Property(name = \"micronaut.security.filter.enabled\", value = StringUtils.FALSE) that retrieves /reports with the Micronaut HttpClient and asserts the two reports.",
+      "files": [
+        "evals/files/security-disabled/src/main/java/com/example/reports/Report.java",
+        "evals/files/security-disabled/src/main/java/com/example/reports/ReportController.java",
+        "evals/files/security-disabled/src/main/resources/application.properties"
+      ],
+      "assertions": [
+        "Security is bypassed with micronaut.security.filter.enabled set to false",
+        "The property value uses StringUtils.FALSE rather than the literal \"false\"",
+        "No AuthenticationProvider, token or credentials are created for the test",
+        "The test retrieves /reports with the Micronaut HttpClient and asserts both reports (e.g. Argument.listOf(Report.class) or JSON content)"
+      ]
+    },
+    {
+      "id": 13,
+      "name": "serde-one-direction",
+      "prompt": "TopicView (src/main/java/com/example/topics/TopicView.java) is a response-only DTO. Write a test that pins down its serialization contract so nobody accidentally makes it readable from requests or breaks writing it.",
+      "expected_output": "A @MicronautTest(startApplication = false) asserting the type is serializable (SerdeIntrospections.getSerializableIntrospection or JsonMapper.writeValueAsString) and that deserialization is NOT supported (assertThrows on getDeserializableIntrospection or readValue).",
+      "files": [
+        "evals/files/serde-one-direction/src/main/java/com/example/topics/TopicView.java"
+      ],
+      "assertions": [
+        "The test uses @MicronautTest(startApplication = false)",
+        "The test asserts TopicView can be serialized (getSerializableIntrospection in assertDoesNotThrow, or writeValueAsString with expected JSON)",
+        "The test asserts TopicView can NOT be deserialized (assertThrows around getDeserializableIntrospection or readValue)",
+        "Only Micronaut serde APIs are used (JsonMapper / SerdeIntrospections), not Jackson's ObjectMapper"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "json-generic-list",
+      "prompt": "Our API returns a JSON array of Topic. Write a test that [{\"id\":\"1\",\"name\":\"Micronaut\"},{\"id\":\"2\",\"name\":\"GraalVM\"}] deserializes into a List<Topic>.",
+      "expected_output": "A @MicronautTest(startApplication = false) that calls jsonMapper.readValue(json, Argument.listOf(Topic.class)) and asserts it equals List.of(new Topic(\"1\", \"Micronaut\"), new Topic(\"2\", \"GraalVM\")).",
+      "files": [
+        "evals/files/json-generic-list/src/main/java/com/example/topics/Topic.java"
+      ],
+      "assertions": [
+        "The test injects io.micronaut.json.JsonMapper",
+        "The target type is described with Argument.listOf(Topic.class) (or an equivalent generic Argument), not List.class or a raw type",
+        "The test asserts equality against a List of the two expected Topic records",
+        "The test uses @MicronautTest(startApplication = false)"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "serde-metadata",
+      "prompt": "I don't care what the JSON looks like \u2014 I just want the build to fail if someone strips the serde annotation from Topic.",
+      "expected_output": "A @MicronautTest(startApplication = false) that injects SerdeIntrospections and asserts getSerializableIntrospection and getDeserializableIntrospection for Argument.of(Topic.class) do not throw.",
+      "files": [
+        "evals/files/serde-metadata/src/main/java/com/example/topics/Topic.java"
+      ],
+      "assertions": [
+        "The test uses SerdeIntrospections (getSerializableIntrospection / getDeserializableIntrospection) rather than asserting on JSON output",
+        "Both directions (serializable and deserializable) are asserted",
+        "The checks are wrapped in assertDoesNotThrow",
+        "The test does not use Java reflection (Topic.class.getAnnotation / isAnnotationPresent) to look for @Serdeable"
+      ]
+    },
+    {
+      "id": 16,
+      "name": "optional-field",
+      "prompt": "In Customer (src/main/java/com/example/customers/Customer.java) the email is optional but has to be a valid address when it's there. Write validation tests for email.",
+      "expected_output": "A @MicronautTest(startApplication = false) with an injected Validator asserting: null email -> no violations; malformed email -> violations; valid email -> no violations.",
+      "files": [
+        "evals/files/optional-field/src/main/java/com/example/customers/Customer.java"
+      ],
+      "assertions": [
+        "The test injects a Validator (jakarta.validation.Validator or io.micronaut.validation.validator.Validator) instead of building one with Validation.buildDefaultValidatorFactory()",
+        "A Customer with a valid name and a null email produces NO violations",
+        "A Customer with a malformed email produces violations",
+        "The test uses @MicronautTest(startApplication = false)"
+      ]
+    },
+    {
+      "id": 17,
+      "name": "not-blank-variants",
+      "prompt": "Test that an Article must have a title.",
+      "expected_output": "A @MicronautTest(startApplication = false) with an injected Validator asserting violations for a null, empty and whitespace-only title.",
+      "files": [
+        "evals/files/not-blank-variants/src/main/java/com/example/articles/Article.java"
+      ],
+      "assertions": [
+        "The test asserts violations for a null title",
+        "The test asserts violations for an empty string title",
+        "The test asserts violations for a whitespace-only title",
+        "The test injects a Validator from the context and uses @MicronautTest(startApplication = false)"
+      ]
+    },
+    {
+      "id": 18,
+      "name": "missing-introspection",
+      "prompt": "Write a test that Payment (src/main/java/com/example/payments/Payment.java) rejects a negative amount.",
+      "expected_output": "The agent notices Payment has no @Introspected (or @Serdeable), so Micronaut's validator has no metadata for it, adds the annotation (or tells the user it is required), and writes a test asserting violations for a negative amount.",
+      "files": [
+        "evals/files/missing-introspection/src/main/java/com/example/payments/Payment.java"
+      ],
+      "assertions": [
+        "The response or change identifies that Payment needs @Introspected (or @Serdeable) for Micronaut validation to work, and adds it or explicitly tells the user to",
+        "The test injects a Validator from the context (no Validation.buildDefaultValidatorFactory())",
+        "The test asserts a non-empty set of violations for a negative amount",
+        "The test uses @MicronautTest(startApplication = false)"
+      ]
+    },
+    {
+      "id": 19,
+      "name": "violation-path",
+      "prompt": "Test that an Address with a blank city fails validation \u2014 and that it's the city that fails, not some other field.",
+      "expected_output": "A @MicronautTest(startApplication = false) building an Address with valid street and postalCode and blank city, asserting exactly one violation whose property path is city.",
+      "files": [
+        "evals/files/violation-path/src/main/java/com/example/addresses/Address.java"
+      ],
+      "assertions": [
+        "The Address is built with valid street and postalCode so only city is invalid",
+        "The test asserts on the violation's property path (getPropertyPath()) being city",
+        "The test asserts there is exactly one violation (size 1) or that every violation is on city",
+        "The test injects a Validator and uses @MicronautTest(startApplication = false)"
+      ]
+    },
+    {
+      "id": 20,
+      "name": "absent-bean",
+      "prompt": "SmsSender (src/main/java/com/example/sms/SmsSender.java) must not be created unless SMS is turned on. Write a test that it's absent by default.",
+      "expected_output": "A @MicronautTest(startApplication = false) that injects BeanContext and asserts assertFalse(beanContext.containsBean(SmsSender.class)) without setting sms.enabled.",
+      "files": [
+        "evals/files/absent-bean/src/main/java/com/example/sms/SmsSender.java"
+      ],
+      "assertions": [
+        "The test asserts absence with containsBean(SmsSender.class) returning false",
+        "The test does not set sms.enabled",
+        "The test uses @MicronautTest(startApplication = false) or a manually run ApplicationContext closed with try-with-resources",
+        "The test does not inject SmsSender directly (which would fail context setup rather than assert absence)"
+      ]
+    },
+    {
+      "id": 21,
+      "name": "stereotype",
+      "prompt": "Every service annotated with @AuditedService must end up audited. Write a test that PaymentService carries @Audited.",
+      "expected_output": "A @MicronautTest(startApplication = false) that gets beanContext.getBeanDefinition(PaymentService.class) and asserts hasStereotype(Audited.class) (or getAnnotationNameByStereotype(Audited.class).isPresent()).",
+      "files": [
+        "evals/files/stereotype/src/main/java/com/example/audit/Audited.java",
+        "evals/files/stereotype/src/main/java/com/example/audit/AuditedService.java",
+        "evals/files/stereotype/src/main/java/com/example/payments/PaymentService.java"
+      ],
+      "assertions": [
+        "The test reads annotation metadata from Micronaut (BeanDefinition or BeanContext.getBeanDefinition), not from Java reflection",
+        "The test checks Audited with hasStereotype or getAnnotationNameByStereotype (hasAnnotation alone would miss a meta-annotation)",
+        "The test does not use PaymentService.class.getAnnotation / isAnnotationPresent (Audited has CLASS retention so reflection would not see it)",
+        "The test uses @MicronautTest(startApplication = false)"
+      ]
+    },
+    {
+      "id": 22,
+      "name": "requires-property",
+      "prompt": "SmsSender is only created when sms.enabled is true. Write a test that it IS available once SMS is turned on.",
+      "expected_output": "A @MicronautTest(startApplication = false) annotated with @Property(name = \"sms.enabled\", value = StringUtils.TRUE) asserting containsBean(SmsSender.class) is true (or getBean does not throw).",
+      "files": [
+        "evals/files/requires-property/src/main/java/com/example/sms/SmsSender.java"
+      ],
+      "assertions": [
+        "The test sets sms.enabled to true for the context (@Property on the test class, or ApplicationContext.run(Map.of(\"sms.enabled\", ...)))",
+        "The property value uses StringUtils.TRUE rather than the literal \"true\" (when set via @Property)",
+        "The test asserts presence via containsBean returning true or getBean in assertDoesNotThrow",
+        "The test does not start the embedded server (startApplication = false or a plain ApplicationContext)"
+      ]
+    },
+    {
+      "id": 23,
+      "name": "environments",
+      "prompt": "Our repository tests use @MicronautTest(environments = \"h2\") (see BookRepositoryTest). Add a test checking which environments are actually active in that setup.",
+      "expected_output": "A @MicronautTest(environments = \"h2\") that injects ApplicationContext and asserts getEnvironment().getActiveNames() equals Set.of(\"test\", \"h2\") (or contains both).",
+      "files": [
+        "evals/files/environments/src/main/resources/application-h2.properties",
+        "evals/files/environments/src/test/java/com/example/repositories/BookRepositoryTest.java"
+      ],
+      "assertions": [
+        "The test is annotated with @MicronautTest(environments = \"h2\")",
+        "The test reads applicationContext.getEnvironment().getActiveNames()",
+        "The assertion expects both test and h2 (exact Set.of(\"test\", \"h2\") or contains both)",
+        "The test does not assume h2 replaces test (i.e. does not assert the set is exactly {\"h2\"})"
+      ]
+    },
+    {
+      "id": 24,
+      "name": "context-without-test",
+      "prompt": "We don't have micronaut-test on the classpath, only plain JUnit (see build.gradle). Write a test that GreetingService is a bean and greets correctly.",
+      "expected_output": "A plain JUnit 5 test that starts ApplicationContext.run() in try-with-resources, asserts containsBean(GreetingService.class) and calls getBean(GreetingService.class).greet(...).",
+      "files": [
+        "evals/files/context-without-test/build.gradle",
+        "evals/files/context-without-test/src/main/java/com/example/greetings/GreetingService.java"
+      ],
+      "assertions": [
+        "The test does not use @MicronautTest or any io.micronaut.test import",
+        "The ApplicationContext is started with ApplicationContext.run() in a try-with-resources block (or closed in @AfterAll/@AfterEach)",
+        "GreetingService is obtained from the context (getBean), not instantiated with new",
+        "The test does not add micronaut-test to build.gradle"
+      ]
+    },
+    {
+      "id": 25,
+      "name": "view-handlebars",
+      "prompt": "We use Handlebars for views. Write a fast test that renders views/home.hbs with title \"Hello\" and checks the title shows up \u2014 no HTTP.",
+      "expected_output": "A @MicronautTest(startApplication = false) in package com.example.home (or another com.example package) that injects HandlebarsViewsRenderer (or ViewsRenderer), renders \"home\" with Map.of(\"title\", \"Hello\"), writes the Writable to a String and asserts it contains Hello.",
+      "files": [
+        "evals/files/view-handlebars/src/main/java/com/example/home/HomeController.java",
+        "evals/files/view-handlebars/src/main/resources/views/home.hbs"
+      ],
+      "assertions": [
+        "The test injects HandlebarsViewsRenderer (or a generic ViewsRenderer), NOT ThymeleafViewsRenderer",
+        "The test calls render(\"home\", <model with title Hello>, <request or null>)",
+        "The test asserts the rendered output contains Hello",
+        "The test uses @MicronautTest(startApplication = false) and no HttpClient",
+        "The test lives in a com.example package, not a package copied from the skill's examples (e.g. com.micronauttodo.views)"
+      ]
+    }
+  ]
+}
