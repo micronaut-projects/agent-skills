@@ -30,7 +30,7 @@
         "evals/files/controller-html/src/main/java/com/example/contacts/JdbcContactRepository.java"
       ],
       "assertions": [
-        "The stub repository is a @Singleton annotated with @Replaces(ContactRepository.class)",
+        "The stub repository is a @Singleton annotated with @Replaces targeting the real repository (ContactRepository or JdbcContactRepository)",
         "The stub is guarded by @Requires(property = \"spec.name\", value = \"<test class name>\") and the test class carries a matching @Property(name = \"spec.name\", value = \"<test class name>\")",
         "The request sets .accept(MediaType.TEXT_HTML)",
         "The body is retrieved as a String (client.retrieve(request, String.class) or equivalent) and the assertions check for the stubbed contact names in the HTML",
